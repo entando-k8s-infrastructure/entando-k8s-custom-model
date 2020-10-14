@@ -14,22 +14,23 @@
  *
  */
 
-package org.entando.kubernetes.model.debundle;
+package org.entando.kubernetes.model.bundle;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import org.entando.kubernetes.model.EntandoCustomResourceResolver;
 
-public final class EntandoDeBundleOperationFactory {
+public final class EntandoBundleReleaseOperationFactory {
 
-    private static EntandoCustomResourceResolver<EntandoDeBundle, EntandoDeBundleList, DoneableEntandoDeBundle> resolver =
-            new EntandoCustomResourceResolver<>(EntandoDeBundle.class, EntandoDeBundleList.class, DoneableEntandoDeBundle.class);
+    private static EntandoCustomResourceResolver<EntandoBundleRelease, EntandoBundleReleaseList, DoneableEntandoBundleRelease> resolver =
+            new EntandoCustomResourceResolver<>(EntandoBundleRelease.class, EntandoBundleReleaseList.class,
+                    DoneableEntandoBundleRelease.class);
 
-    private EntandoDeBundleOperationFactory() {
+    private EntandoBundleReleaseOperationFactory() {
     }
 
-    public static CustomResourceOperationsImpl<EntandoDeBundle, EntandoDeBundleList, DoneableEntandoDeBundle> produceAllEntandoDeBundles(
-            KubernetesClient client) {
+    public static CustomResourceOperationsImpl<EntandoBundleRelease,
+            EntandoBundleReleaseList, DoneableEntandoBundleRelease> produceAllEntandoBundleReleases(KubernetesClient client) {
         return resolver.resolveOperation(client);
     }
 }

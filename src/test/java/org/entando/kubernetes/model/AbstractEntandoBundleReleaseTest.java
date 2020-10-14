@@ -1,0 +1,156 @@
+/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.model;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
+import io.fabric8.kubernetes.client.CustomResourceList;
+import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import org.entando.kubernetes.model.bundle.DoneableEntandoBundleRelease;
+import org.entando.kubernetes.model.bundle.EntandoBundleFormat;
+import org.entando.kubernetes.model.bundle.EntandoBundleRelease;
+import org.entando.kubernetes.model.bundle.EntandoBundleReleaseBuilder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+public abstract class AbstractEntandoBundleReleaseTest implements CustomResourceTestUtil {
+
+    public static final String BUNDLE_NAME = "my-bundle";
+    public static final String BUNDLE_ORGANIZATION = "entando";
+    public static final String BUNDLE_TITLE = "A title for app-builder";
+    public static final String BUNDLE_DESCRIPTION = "my-description";
+    public static final String BUNDLE_VERSION = "0.0.1";
+    public static final String BUNDLE_SHA256 = "AFGAGARG";
+    private static final String BUNDLE_SIGNATURE = "AFGAGARG";
+    public static final String BUNDLE_URL = "http://github.com/entando-bundles/blueserver";
+    public static final String BUNDLE_THUMBNAIL = "Jyt6tAV2CLeDid2LiT34tA";
+    public static final String BUNDLE_AUTHOR = "entando-dev@entando.com";
+    public static final String BUNDLE_FORMAT = "git";
+    public static final String BUNDLE_RELEASE_AT = "2020-04-17T15:30:00Z";
+
+    protected static final String BUNDLE_NAMESPACE = TestConfig.calculateNameSpace("my-namespace");
+    public static final String BUNDLER_CRT = "BUNDLER_CRT";
+    private EntandoResourceOperationsRegistry registry;
+
+    @BeforeEach
+    public void deleteEntandoBundleReleases() {
+        this.registry = new EntandoResourceOperationsRegistry(getClient());
+        prepareNamespace(entandoBundleReleases(), BUNDLE_NAMESPACE);
+    }
+
+    @Test
+    public void testCreateEntandoBundleRelease() {
+        //Given
+        EntandoBundleRelease entandoBundleRelease = new EntandoBundleReleaseBuilder()
+                .withNewMetadata()
+                .withName(BUNDLE_NAME)
+                .withNamespace(BUNDLE_NAMESPACE)
+                .addToLabels("widgets", "true")
+                .addToLabels("plugin", "true")
+                .endMetadata()
+                .withNewSpec()
+                .withName(BUNDLE_NAME)
+                .withTitle(BUNDLE_TITLE)
+                .withOrganization(BUNDLE_ORGANIZATION)
+                .withDescription(BUNDLE_DESCRIPTION)
+                .withVersion(BUNDLE_VERSION)
+                .withThumbnail(BUNDLE_THUMBNAIL)
+                .withAuthor(BUNDLE_AUTHOR)
+                .withFormat(BUNDLE_FORMAT)
+                .withSignature(BUNDLE_SIGNATURE)
+                .withSha256(BUNDLE_SHA256)
+                .withUrl(BUNDLE_URL)
+                .withReleaseAt(BUNDLE_RELEASE_AT)
+                .endSpec()
+                .build();
+        entandoBundleReleases().inNamespace(BUNDLE_NAMESPACE).createNew().withMetadata(entandoBundleRelease.getMetadata())
+                .withSpec(entandoBundleRelease.getSpec()).done();
+        //When
+        EntandoBundleRelease actual = entandoBundleReleases().inNamespace(BUNDLE_NAMESPACE).withName(BUNDLE_NAME).get();
+
+        //Then
+        assertThat(actual.getSpec().getName().get(), is(BUNDLE_NAME));
+        assertThat(actual.getSpec().getOrganization().get(), is(BUNDLE_ORGANIZATION));
+        assertThat(actual.getSpec().getDescription().get(), is(BUNDLE_DESCRIPTION));
+        assertThat(actual.getSpec().getThumbnail().get(), is(BUNDLE_THUMBNAIL));
+        assertThat(actual.getSpec().getTitle().get(), is(BUNDLE_TITLE));
+        assertThat(actual.getSpec().getVersion().get(), is(BUNDLE_VERSION));
+        assertThat(actual.getSpec().getUrl().get(), is(BUNDLE_URL));
+        assertThat(actual.getSpec().getFormat().get(), is(EntandoBundleFormat.GIT));
+        assertThat(actual.getSpec().getAuthor().get(), is(BUNDLE_AUTHOR));
+        assertThat(actual.getSpec().getSha256().get(), is(BUNDLE_SHA256));
+        assertThat(actual.getSpec().getSignature().get(), is(BUNDLE_SIGNATURE));
+        assertThat(actual.getSpec().getCertificate().isPresent(), is(false));
+        assertThat(actual.getSpec().getReleaseAt().get(), is(BUNDLE_RELEASE_AT));
+        assertThat(actual.getMetadata().getName(), is(BUNDLE_NAME));
+    }
+
+    @Test
+    public void testEditEntandoBundleRelease() {
+        //Given
+        EntandoBundleRelease entandoApp = new EntandoBundleReleaseBuilder()
+                .withNewMetadata()
+                .withName(BUNDLE_NAME)
+                .withNamespace(BUNDLE_NAMESPACE)
+                .endMetadata()
+                .withNewSpec()
+                .withDescription(BUNDLE_DESCRIPTION)
+                .withName(BUNDLE_NAME)
+                .withThumbnail("H0cFRNTEJt8EZBcL17_iww")
+                .withSignature("asdfasdfasdfasdsafsdfs")
+                .withSha256("1234123412341234")
+                .withUrl("sdfasdfasdfasdfas")
+                .withVersion("0.0.2")
+                .endSpec()
+                .build();
+        //When
+        //We are not using the mock server here because of a known bug
+        EntandoBundleRelease actual = editEntandoBundleRelease(entandoApp)
+                .editMetadata()
+                .endMetadata()
+                .editSpec()
+                .withDescription(BUNDLE_DESCRIPTION)
+                .withName(BUNDLE_NAME)
+                .withThumbnail(BUNDLE_THUMBNAIL)
+                .withVersion(BUNDLE_VERSION)
+                .withSha256(BUNDLE_SHA256)
+                .withUrl(BUNDLE_URL)
+                .endSpec()
+                .withPhase(EntandoDeploymentPhase.STARTED)
+                .done();
+        //Then
+        assertThat(actual.getSpec().getName().get(), is(BUNDLE_NAME));
+        assertThat(actual.getSpec().getDescription().get(), is(BUNDLE_DESCRIPTION));
+        assertThat(actual.getSpec().getThumbnail().get(), is(BUNDLE_THUMBNAIL));
+        assertThat(actual.getSpec().getVersion().get(), is(BUNDLE_VERSION));
+        assertThat(actual.getSpec().getSha256().get(), is(BUNDLE_SHA256));
+        assertThat(actual.getSpec().getUrl().get(), is(BUNDLE_URL));
+        assertThat(actual.getMetadata().getName(), is(BUNDLE_NAME));
+    }
+
+    protected DoneableEntandoBundleRelease editEntandoBundleRelease(EntandoBundleRelease entandoApp) {
+        entandoBundleReleases().inNamespace(BUNDLE_NAMESPACE).create(entandoApp);
+        return entandoBundleReleases().inNamespace(BUNDLE_NAMESPACE).withName(BUNDLE_NAME).edit();
+    }
+
+    protected CustomResourceOperationsImpl<EntandoBundleRelease, CustomResourceList<EntandoBundleRelease>,
+            DoneableEntandoBundleRelease> entandoBundleReleases() {
+        return registry.getOperations(EntandoBundleRelease.class);
+    }
+
+}
